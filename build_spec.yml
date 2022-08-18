@@ -1,0 +1,74 @@
+version: 0.1
+component: build
+timeoutInSeconds: 6000
+runAs: root
+shell: bash
+env:
+  variables:
+    "testEnv" : "testValue1"
+    "minor_version" : "22"
+    "bp_param3" : "3000"
+    "br_param6" : "6000"
+    "param_4" : "4000"
+    "runtimefile" : "tempVersions.txt"
+  exportedVariables:
+    - testEnv
+    - minor_version
+    - param_4
+    - bp_param3
+    - br_param6
+    - vault_var
+    - RUNTIME_VERSIONS
+  vaultVariables:
+    "pat": "ocid1.vaultsecret.oc1.phx.amaaaaaa37rb4miaszbgunljaacbbozapymn3qhqwguqqkragroorlticguq"       # secret-id (in OCI ID format) STORED IN OCI Vault Service
+# inputArtifacts:
+#   - name: hello-dev-jar
+#     location: hello123.class
+
+steps:
+  - type: VulnerabilityAudit        # required
+    name: "Vulnerability Audit Step" # optional
+    configuration:                   # required
+      buildType: maven               # required
+      pomFilePath: ${OCI_PRIMARY_SOURCE_DIR}/pom.xml # required (Supports parameter substitution)
+      maxPermissibleCvssV2Score: 10.0                # optional (defaults to 0.0)
+      maxPermissibleCvssV3Score: 10.0                # optional (defaults to 0.0)
+    knowledgeBaseId: ${PIPELINE_PARAM_KB_OCID_REGIONAL} # required (Supports parameter substitution)
+    vulnerabilityAuditName: VulnerabilityAuditReport
+  - type: Command
+    name: "Build Source"
+    timeoutInSeconds: 400
+    command: |
+      echo "hello world"
+      echo $pat > abc.txt
+      echo $minor_version
+      echo $testEnv
+      vault_var=$pat
+  - type: Command
+    name: "Get Build Runner Runtime Versions"
+    timeoutInSeconds: 400
+    command: |
+      echo "maven version" &> ${runtimefile} && mvn -v  &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "git version" &>> ${runtimefile} && git --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "gradle version" &>> ${runtimefile} && gradle --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "fn version" &>> ${runtimefile} && fn version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "helm version" &>> ${runtimefile} && helm version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "docker version" &>> ${runtimefile} && docker --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "python2 version" &>> ${runtimefile} && python2 --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "python3 version" &>> ${runtimefile} && python3 --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "python version" &>> ${runtimefile} && python --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "oci-cli version" &>> ${runtimefile} && oci --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "java version" &>> ${runtimefile} && java -version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "nodejs version" &>> ${runtimefile} && node --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "golang version" &>> ${runtimefile} && go version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "ruby version" &>> ${runtimefile} && ruby -v &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "rails version" &>> ${runtimefile} && rails -v &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "php version" &>> ${runtimefile} && php --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      echo "android sdk version" &>> ${runtimefile} && ${ANDROID_HOME}/tools/bin/sdkmanager --version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile} && \
+      terraform version &>> ${runtimefile} && printf "\n\n" &>> ${runtimefile}
+      cat ${runtimefile} && export RUNTIME_VERSIONS=`cat ${runtimefile}`
+      rm -f ${runtimefile}
+outputArtifacts:
+  - name: ABC
+    type: BINARY
+    location: abc.txt
